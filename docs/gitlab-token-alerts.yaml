@@ -1,0 +1,83 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    app: prometheus-operator
+    release: prometheus-operator
+  name: gitlab-token-alerts
+  namespace: monitoring
+spec:
+  groups:
+  - name: gitlab-tokens
+    rules:
+    - alert: TokenExpiresSoon
+      expr: gitlab_token_expires_at < 336
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "GitLab токен истекает менее чем через 2 недели"
+        description: "Токен {{ $labels.name }} истекает через {{ $value }} часов (менее 2 недель)"
+
+    - alert: UserTokenExpiresSoon
+      expr: gitlab_user_token_expires_at < 336
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Пользовательский GitLab токен истекает менее чем через 2 недели"
+        description: "Пользовательский токен {{ $labels.name }} истекает через {{ $value }} часов (менее 2 недель)"
+
+    - alert: TokenExpiresCritical
+      expr: gitlab_token_expires_at < 168
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "GitLab токен истекает менее чем через неделю"
+        description: "Токен {{ $labels.name }} истекает через {{ $value }} часов (менее недели)"
+
+    - alert: UserTokenExpiresCritical
+      expr: gitlab_user_token_expires_at < 168
+      for: 5m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Пользовательский GitLab токен истекает менее чем через неделю"
+        description: "Пользовательский токен {{ $labels.name }} истекает через {{ $value }} часов (менее недели)"
+
+    - alert: TokenExpired
+      expr: gitlab_token_is_expired == 1
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "GitLab токен истек"
+        description: "Токен {{ $labels.name }} истек и требует обновления"
+
+    - alert: UserTokenExpired
+      expr: gitlab_user_token_is_expired == 1
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Пользовательский GitLab токен истек"
+        description: "Пользовательский токен {{ $labels.name }} истек и требует обновления"
+
+    - alert: TokenScraperErrors
+      expr: rate(gitlab_token_scrape_errors_total[5m]) > 0
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Ошибки при сборе метрик токенов GitLab"
+        description: "Обнаружены ошибки при сборе метрик токенов GitLab: {{ $value }} ошибок в минуту"
+
+    - alert: TokenScraperDown
+      expr: up{job="gitlab-token-exporter"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "GitLab Token Exporter недоступен"
+        description: "Сервис gitlab-token-exporter недоступен более 1 минуты"
